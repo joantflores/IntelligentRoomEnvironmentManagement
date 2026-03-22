@@ -1,0 +1,5 @@
+../Core/Src/freertos.c:85:6:UART_Log	16	static
+../Core/Src/freertos.c:102:6:MX_FREERTOS_Init	8	static
+../Core/Src/freertos.c:154:6:StartDefaultTask	16	static
+../Core/Src/freertos.c:172:6:StartWakeUpTask	24	static
+../Core/Src/freertos.c:192:6:StartEnvControlTask	120	static
