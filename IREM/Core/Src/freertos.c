@@ -28,6 +28,7 @@
 #include "adc.h"
 #include "tim.h"
 #include "usart.h"
+#include "gpio.h"
 #include <stdio.h>
 #include <string.h>
 /* USER CODE END Includes */
@@ -52,6 +53,7 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 uint32_t adcValues[4];
+uint8_t presenceDetected = 0;
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
@@ -74,6 +76,13 @@ const osThreadAttr_t EnvControlTask_attributes = {
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
+/* Definitions for PIRTask */
+osThreadId_t PIRTaskHandle;
+const osThreadAttr_t PIRTask_attributes = {
+  .name = "PIRTask",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityAboveNormal,
+};
 /* Definitions for EnvQueue */
 osMessageQueueId_t EnvQueueHandle;
 const osMessageQueueAttr_t EnvQueue_attributes = {
@@ -91,6 +100,7 @@ void UART_Log(const char* msg)
 void StartDefaultTask(void *argument);
 void StartWakeUpTask(void *argument);
 void StartEnvControlTask(void *argument);
+void StartPIRTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -134,6 +144,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of EnvControlTask */
   EnvControlTaskHandle = osThreadNew(StartEnvControlTask, NULL, &EnvControlTask_attributes);
 
+  /* creation of PIRTask */
+  PIRTaskHandle = osThreadNew(StartPIRTask, NULL, &PIRTask_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -171,15 +184,12 @@ void StartDefaultTask(void *argument)
 /* USER CODE END Header_StartWakeUpTask */
 void StartWakeUpTask(void *argument)
 {
-  /* USER CODE BEGIN StartWakeUpTask */
-  /* Infinite loop */
-	uint32_t msg = WAKE_UP_MSG;
+	/* USER CODE BEGIN StartWakeUpTask */
 	for(;;)
 	{
-	    osMessageQueuePut(EnvQueueHandle, &msg, 0, osWaitForever);
-	    osDelay(10000); // Envía WAKE_UP cada 10 segundos
+	    osDelay(1000);
 	}
-  /* USER CODE END StartWakeUpTask */
+	/* USER CODE END StartWakeUpTask */
 }
 
 /* USER CODE BEGIN Header_StartEnvControlTask */
@@ -191,7 +201,7 @@ void StartWakeUpTask(void *argument)
 /* USER CODE END Header_StartEnvControlTask */
 void StartEnvControlTask(void *argument)
 {
-	/* USER CODE BEGIN StartEnvControlTask */
+  /* USER CODE BEGIN StartEnvControlTask */
 	uint32_t msg;
 	uint32_t targetBrightness;
 	char uartBuf[64];
@@ -290,11 +300,54 @@ void StartEnvControlTask(void *argument)
 	        }
 	    }
 	}
-	/* USER CODE END StartEnvControlTask */
+  /* USER CODE END StartEnvControlTask */
+}
+
+/* USER CODE BEGIN Header_StartPIRTask */
+/**
+* @brief Function implementing the PIRTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartPIRTask */
+void StartPIRTask(void *argument)
+{
+	/* USER CODE BEGIN StartPIRTask */
+	for(;;)
+	{
+	    osDelay(1000);
+	}
+	/* USER CODE END StartPIRTask */
 }
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    if(GPIO_Pin == GPIO_PIN_9)
+    {
+        uint32_t msg;
+        if(HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_9) == GPIO_PIN_SET)
+        {
+            if(presenceDetected == 0)
+            {
+                presenceDetected = 1;
+                msg = WAKE_UP_MSG;
+                UART_Log("[PIR] Presencia detectada - Encendiendo luces\r\n");
+                osMessageQueuePut(EnvQueueHandle, &msg, 0, 0);
+            }
+        }
+        else
+        {
+            if(presenceDetected == 1)
+            {
+                presenceDetected = 0;
+                msg = LIGHT_DOWN_MSG;
+                UART_Log("[PIR] Sin presencia - Apagando luces\r\n");
+                osMessageQueuePut(EnvQueueHandle, &msg, 0, 0);
+            }
+        }
+    }
+}
 /* USER CODE END Application */
 

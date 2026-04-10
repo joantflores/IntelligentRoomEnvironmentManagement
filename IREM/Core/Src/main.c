@@ -98,11 +98,11 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_ADC1_Init();
-  // MX_ETH_Init();
+  MX_ETH_Init();
   MX_TIM1_Init();
   MX_TIM4_Init();
   MX_USART3_UART_Init();
-  //MX_USB_OTG_FS_PCD_Init();
+  MX_USB_OTG_FS_PCD_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
